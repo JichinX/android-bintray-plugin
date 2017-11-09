@@ -14,97 +14,92 @@ Bintray REST API需要一枚适用的API Key，这个key可以在用户的偏好
 API的请求是有限制的，限制规则如下：这些限制仅仅是针对不属于用户或者用户所在组织的资源。
 现在对于每个非付费用户的限制是一天300次请求。
 这些限制会被返回在 **X-RateLimit** 的返回头中。比如：     
-
-    X-RateLimit-Limit:1440 //请求数
-    X-RateLimit-Remaining:257//剩余数
+```
+X-RateLimit-Limit:1440 //请求数
+X-RateLimit-Remaining:257//剩余数
+```
 ###请求分页
 结果有可能是分页。现在返回结果是每次请求50次结果，因此，这个**start_pos**请求参数可以来设置请求的开始位置。
 如果使用分页,**X-RangeLimit**参数会被包含在返回头来表示这次请求的结果。
-    
-    GET / . . / . . / . . &start_pos = 250 //设置开始位置为250
-    X-RangeLimit-Total:20000 //数据总数
-    X-RangeLimit-StartPos:250 //开始位置
-    X-RangeLimit-EndPos:299 //数据结束位置
+```
+GET / . . / . . / . . &start_pos = 250 //设置开始位置为250
+X-RangeLimit-Total:20000 //数据总数
+X-RangeLimit-StartPos:250 //开始位置
+X-RangeLimit-EndPos:299 //数据结束位置
+```    
 ###GPG签名
-Bintray支持所有的仓库内容自动签名,和一些特定的仓库类型，比如：Debian和YUM
-    至少,这需要一个GPG公共密钥存储库配置为所有者(个人或组织)。 额外的签名信息也可以保存在Bintray或者通过休息。
-    
-    基于rest的签约信息可能提供的两种方式,根据GPG信息已经存储在Bintray:
-    
-    使用一个X-GPG-PASSPHRASE头
-    每当Bintray需要的私钥密码。
-    
-    X-GPG-PASSPHRASE:密码
-    使用JSON的身体
-    每当需要额外的签名信息,如:
-    
-    替代Bintray GPG公钥的课题
-    
-    可选的私钥,如果不是存储在Bintray
-    
-    可选的私钥密码(如果需要)
-    
+Bintray支持所有的仓库内容自动签名,包括一些特定的仓库类型的元数据签名，比如：Debian和YUM
+所以，至少,这需要一个为个人或组织已经配置号的GPG公共密钥，额外的签名信息，可以保存在Bintray或者通过REST传递。
+基本的REST使用的签名信息可能有两种设置方式，浙取决于已经存储在Bintray中的GPG信息。
+>1.使用一个X-GPG-PASSPHRASE请求头，当Bintray中的私钥需要密码时。       
+```
+    X-GPG-PASSPHRASE:passphrase        
+```
+>2.使用JSON请求体，当需要额外的签名信息时,如:    
+    1 替代Bintray GPG公钥  
+    2 设置一个可选的私钥,如果私钥不是存储在Bintray    
+    3 可选的私钥密码(如果需要)
+```
     {
-    “主题”:“迪玛”,
-    “密码”:“papX * * * yH8eKw”,
-    :“private_key——开始PGP私钥块- - - - - -”
+      "subject": "dima",
+      "passphrase": "papX***yH8eKw",
+      "private_key": "-----BEGIN PGP PRIVATE KEY BLOCK-----"
     }
-    当签约信息不提供或部分没有GPG签字会发生。
-    
-    内容下载
-    
-    下载内容
-    
-    https://dl.bintray.com/:主题/:回购/:file_path
-    得到https://:subject.bintray.com/:repo /:file_path
-    从指定的库路径下载内容。
-    
-    注意:下载是通过dl.bintray.com域,或:subject.bintray.com对优质账户。
-    
-    下载下载内容时只需要使用HTTP基本身份验证
-    从私人仓库或者当下载未发表的文件。
-    
-    安全:通过身份验证的用户使用“读取”权限为私人存储库,或者阅读权利为存储库路径。
-    
-    动态下载
-    
-    GET /content/:subject/:repo/:file_path?bt_package=:package
-    这个资源只能用于Bintray高端存储库。
-    
-    基于动态下载一个文件file_path。
-    
-    目前,只有$latest支持令牌,这是发表在指定用于下载最新的文件包。
-    可以提供作为包名称:
-    的bt_package查询参数
-    的bt_package矩阵参数
-    的X-Bintray-Package请求头
-    
-    例如:
-    
-    GET /内容/ bintray jcenter /com/jfrog/bintray/client/bintray-client-java-api/最新/ bintray-client-java-api - latest.jar美元;bt_package = bintray-client-java
-    一个成功的调用将返回一个302重定向到一个生成的URL(15秒到期)签署的文件路径解决。
-    
-    Status: 302 OK
-    EULA-Protected产品版本下载
-    
-    用户必须接受版本的EULA第一下载使用之前提供的访问密钥。 试图下载没有接受EULA将生成一个通知,内容包括以下反应: “下载资源:工件需要接受它的EULA:
-    http://bintray.com/:主题/产品/产品/:artifact.version.name / accept_eula ?用户名=:用户名”
-    用户应该浏览指定的URL,使用提供的访问密钥登录,并接受EULA。 随后下载尝试使用相同的访问密钥将会成功。
-    
-    安全:通过身份验证的用户使用“读取”权限为私人存储库,或者阅读权利为存储库路径。
-    
-    URL签署
-    
-    回购/ POST / signed_url /主题/::file_path[?加密= true / false):
-    {
-      "expiry": 7956915742000,
-      "valid_for_secs": 30,
-      "callback_id": :id,
-      "callback_email": :email,
-      "callback_url": :url[?QUERY_PARAM=%callback_id],
-      "callback_method": :method,
-      "secret": :secret
-    }
+```
+签名信息未提供或不完全则不会对内容进行签名。
+
+##内容下载
+###下载内容
+```
+GET https://dl.bintray.com/:subject/:repo/:file_path
+GET https://:subject.bintray.com/:repo/:file_path
+```
+按照以上链接，从指定的库路径下载内容。
+**注意**:下载是通过dl.bintray.com域,或对于付费账户的域:subject.bintray.com。从私人存储库下载内容或下载未发布的文件时，下载只需要使用HTTP BASIC认证。
+从私人存储库下载内容或下载未发布的文件时，下载只需要使用HTTP BASIC认证。
+**安全**:只有对私有存储库或者私有路径具有“读取”权限的用户。
+###动态下载
+```
+GET /content/:subject/:repo/:file_path?bt_package=:package
+```
+这个请求链接只能用于Bintray付费的仓库。
+下载一个基于动态路径的文件 **file_path**
+现在，只支持下载最新($latest)版本,这样有利于下载发布在指定包路径下的最新版本文件
+包名可以通过以下方式提供:
+   > 作为查询参数，使用bt_package   
+     作为矩阵参数，使用bt_package   
+   > 在请求头中使用X-Bintray-Package
+
+例如:
+```
+GET /content/bintray/jcenter/com/jfrog/bintray/client/bintray-client-java-api/$latest/
+bintray-client-java-api-$latest.jar
+bt_package=bintray-client-java
+```
+如果请求成功，会返回一个302重定向到一个被自动签名的链接（15s到期）
+一个成功的调用将返回一个302重定向到一个生成的URL(15秒到期)签署的文件路径解决。
+```
+Status: 302 OK
+```
+###受EULA(最终用户许可协议)保护的产品版本下载
+用户必须使用第一次下载之前提供的访问密钥来接受该版本的EULA。尝试在不接受EULA的情况下下载内容将生成通知，其中包含以下响应：“要下载 【资源：工件】，您需要接受其EULA：
+http : //bintray.com/ : subject/ product/: product /:artifact.version.name/accept_eula?username=:username“
+用户应浏览到指定的URL，使用提供的访问密钥进行登录，然后接受EULA。随后使用相同访问密钥的下载尝试将成功。  
+###URL签名
+```
+POST /signed_url/:subject/:repo/:file_path[?encrypt=:true/false]
+```
+```
+{
+    "expiry": 7956915742000,
+    "valid_for_secs": 30,
+    "callback_id": :id,
+    "callback_email": :email,
+    "callback_url": :url[?QUERY_PARAM=%callback_id],
+    "callback_method": :method,
+    "secret": :secret
+}
+```
     这个资源是只有Bintray高端用户。
     生成一个匿名的,签署下载URL和一个截止日期。
     调用者必须是一个库或者一个出版商的老板组织拥有存储库。
@@ -158,52 +153,45 @@ Bintray支持所有的仓库内容自动签名,和一些特定的仓库类型，
       "callback_id": "malcolm",
       "ip_address": "192.10.2.34"
     }
-    内容上传和发布
+##内容上传和发布
     
-    上传内容
+###上传内容
     
-    /内容/:/主题:回购/:包/:/版本:file_path(?发布= 0/1)(?覆盖= 0/1)(? = 0/1爆炸)
-    或者:
-    
+```
+PUT /content/:subject/:repo/:package/:version/:file_path[?publish=0/1][?override=0/1][?explode=0/1]
+```
+或者
+```
     X-Bintray-Package:包
     X-Bintray-Version:版本
-    (X-Bintray-Publish:0/1)
-    (X-Bintray-Override:0/1)
-    (X-Bintray-Explode:0/1)
-    把/内容/主题/:回购/:file_path
-    或者:
+    [X-Bintray-Publish:0/1]
+    [X-Bintray-Override:0/1]
+    [X-Bintray-Explode:0/1]
+``` 
+或者:
+```
+PUT /content/:subject/:repo/:file_path;bt_package=:package;bt_version=:version[;publish=0/1][;override=0/1][;explode=0/1]
+```    
+上传内容到指定的库路径,包括版本信息(必需)。
+包和版本可以通过下列方式指定:
+   1. 在请求路径
+   2. 作为请求头
+   3. 作为矩阵参数
+   
+可选择将上传的工件发布为上传的一部分（默认为关闭）。其他内容可以在发布日期后的180天内上传到发布的版本。
+发布的工件可能会在180天内重新部署; 要覆盖已经发布的工件，您需要指定“override = 1”。越权开关可以通过以下方式之一进行指定：
+1. 作为查询参数
+2. 作为请求标题
+3. 作为矩阵参数
+可选地，提供一个**X-Checksum-Sha2**包含客户端sha2校验和的头文件。Bintray将验证给定的sha2，并且在不匹配时将返回一个409冲突错误响应。    
+安全性：具有“发布”权限并且经过身份验证的用户，才能读取/写入存储库路径的权利
+####自动签名上传
+你可以提供一个密码签署上传文件和库元数据使用X-GPG-PASSPHRASE头。 请阅读[GPG签名]来获取额外的内容。
     
-    /内容/:/主题:回购/:file_path;bt_package =:包;bt_version =:版本(;发布= 0/1)(;覆盖= 0/1)(;爆炸= 0/1)
-    上传内容到指定的库路径,包和版本信息(要求)。
-    包和版本可以指定下列方法之一:
-    
-    在请求路径
-    
-    当请求头
-    
-    作为矩阵参数
-    
-    选择发布上传工件(s)上传(默认情况下)的一部分。 额外的内容可以在180天内上传到发布版本的发布日期。
-    
-    发表的工件可能部署在180天内; 覆盖一个工件定义需要指定“覆盖= 1”。 覆盖开关可以指定下列方法之一:
-    
-    作为查询参数
-    
-    作为一个请求头
-    
-    作为一个矩阵参数
-    
-    另外,提供一个X-Checksum-Sha2头与用户客户端sha2校验和。 Bintray将验证用户给定sha2冲突和失配将返回一个409错误响应。
-    
-    安全:通过身份验证的用户提供发布的许可,或读/写权限存储库路径
-    
-    自动登录上传
-    
-    你可以提供一个密码签署上传文件和库元数据使用X-GPG-PASSPHRASE头。 请阅读这额外的细节。
-    
-    Maven上传
-    
-    回购/ / maven /:/::包/:file_path(;发布= 0/1)
+###Maven上传
+```
+PUT /maven/:subject/:repo/:package/:file_path[;publish=0/1]
+```
     Maven工件上传到指定的库路径,与包信息(要求)。 版本信息的解决路径,预计跟随Maven布局。 可选直接发布(默认情况下)。
     
     Status: 201 Created
